@@ -232,6 +232,11 @@ func (r *Resource) AsYAML() ([]byte, error) {
 	return yaml.JSONToYAML(json)
 }
 
+// SetOptions updates the generator options for the resource.
+func (r *Resource) SetOptions(o *types.GenArgs) {
+	r.options = o
+}
+
 // Behavior returns the behavior for the resource.
 func (r *Resource) Behavior() types.GenerationBehavior {
 	return r.options.Behavior()

@@ -15,11 +15,14 @@ import (
 	"sigs.k8s.io/kustomize/v3/pkg/ifc"
 	"sigs.k8s.io/kustomize/v3/pkg/resid"
 	"sigs.k8s.io/kustomize/v3/pkg/resmap"
+	"sigs.k8s.io/kustomize/v3/pkg/types"
 	"sigs.k8s.io/yaml"
 )
 
 const (
 	idAnnotation        = "kustomize.config.k8s.io/id"
+	hashAnnotation      = "kustomize.config.k8s.io/needs-hash"
+	behaviorAnnotation  = "kustomize.config.k8s.io/behavior"
 	tmpConfigFilePrefix = "kust-plugin-config-"
 )
 
@@ -96,7 +99,11 @@ func (p *ExecPlugin) Generate() (resmap.ResMap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p.rf.NewResMapFromBytes(output)
+	rm, err := p.rf.NewResMapFromBytes(output)
+	if err != nil {
+		return nil, err
+	}
+	return p.updateResourceOptions(rm), nil
 }
 
 func (p *ExecPlugin) Transform(rm resmap.ResMap) error {
@@ -222,4 +229,29 @@ func (p *ExecPlugin) updateResMapValues(output []byte, rm resmap.ResMap) error {
 		res.Kunstructured = r.Kunstructured
 	}
 	return nil
+}
+
+// updateResourceOptions updates the generator options for each resource in the
+// given ResMap based on plugin provided annotations.
+func (p *ExecPlugin) updateResourceOptions(rm resmap.ResMap) resmap.ResMap {
+	for _, r := range rm.Resources() {
+		disableHash := true
+		// Disable name hashing by default and require plugin to explicitly
+		// request it for each resource.
+		annotations := r.GetAnnotations()
+		behavior := annotations[behaviorAnnotation]
+		if _, ok := annotations[hashAnnotation]; ok {
+			disableHash = false
+		}
+		delete(annotations, hashAnnotation)
+		delete(annotations, behaviorAnnotation)
+		if len(annotations) == 0 {
+			annotations = nil
+		}
+		r.SetAnnotations(annotations)
+		r.SetOptions(types.NewGenArgs(
+			&types.GeneratorArgs{Behavior: behavior},
+			&types.GeneratorOptions{DisableNameSuffixHash: disableHash}))
+	}
+	return rm
 }

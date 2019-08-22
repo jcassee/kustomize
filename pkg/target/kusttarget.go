@@ -260,7 +260,6 @@ func (kt *KustTarget) runGenerators(
 		if err != nil {
 			return err
 		}
-		// The legacy generators allow override.
 		err = ra.AbsorbAll(resMap)
 		if err != nil {
 			return errors.Wrapf(err, "merging from generator %v", g)
@@ -275,7 +274,7 @@ func (kt *KustTarget) runGenerators(
 		if err != nil {
 			return err
 		}
-		err = ra.AppendAll(resMap)
+		err = ra.AbsorbAll(resMap)
 		if err != nil {
 			return errors.Wrapf(err, "merging from generator %v", g)
 		}
