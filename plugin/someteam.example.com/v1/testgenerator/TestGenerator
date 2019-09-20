@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Dummy generator used for testing. Passes the input unchanged.
+
+cat "$1"
