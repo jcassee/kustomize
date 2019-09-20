@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -235,13 +236,14 @@ func (p *ExecPlugin) updateResMapValues(output []byte, rm resmap.ResMap) error {
 // given ResMap based on plugin provided annotations.
 func (p *ExecPlugin) updateResourceOptions(rm resmap.ResMap) resmap.ResMap {
 	for _, r := range rm.Resources() {
-		disableHash := true
+		needsHash := false
 		// Disable name hashing by default and require plugin to explicitly
 		// request it for each resource.
 		annotations := r.GetAnnotations()
 		behavior := annotations[behaviorAnnotation]
-		if _, ok := annotations[hashAnnotation]; ok {
-			disableHash = false
+		if hashAnnotationValue, ok := annotations[hashAnnotation]; ok {
+			needsHash, _ = strconv.ParseBool(hashAnnotationValue)
+			// Silently use default value on error
 		}
 		delete(annotations, hashAnnotation)
 		delete(annotations, behaviorAnnotation)
@@ -251,7 +253,7 @@ func (p *ExecPlugin) updateResourceOptions(rm resmap.ResMap) resmap.ResMap {
 		r.SetAnnotations(annotations)
 		r.SetOptions(types.NewGenArgs(
 			&types.GeneratorArgs{Behavior: behavior},
-			&types.GeneratorOptions{DisableNameSuffixHash: disableHash}))
+			&types.GeneratorOptions{DisableNameSuffixHash: !needsHash}))
 	}
 	return rm
 }
